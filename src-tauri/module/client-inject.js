@@ -2188,7 +2188,7 @@
       return map[player] || null;
     };
 
-    const tryLaunch = async (data, mode) => {
+    const tryLaunch = (data, mode) => {
       const needKey = resolvePlayerNeed(data, mode);
       const player = Prisma.Storage.field(needKey);
       if (!player) return false;
@@ -2218,7 +2218,15 @@
       if (!externalUrl) return false;
 
       try {
-        await window.desktopAPI.external.open(externalUrl);
+        const opened = window.desktopAPI.external.open(externalUrl);
+        if (opened && typeof opened.then === "function") {
+          return opened
+            .then(() => true)
+            .catch((error) => {
+              console.warn("APP external player open failed", error);
+              return false;
+            });
+        }
         return true;
       } catch (error) {
         console.warn("APP external player open failed", error);
@@ -2229,10 +2237,16 @@
     const originalPlay = Prisma.Player.play.bind(Prisma.Player);
     Prisma.Player.play = function (data) {
       if (shouldInterceptExternal()) {
-        tryLaunch(data, "play").then((opened) => {
-          if (!opened) originalPlay(data);
-        });
-        return;
+        const launchResult = tryLaunch(data, "play");
+
+        if (launchResult && typeof launchResult.then === "function") {
+          launchResult.then((opened) => {
+            if (!opened) originalPlay(data);
+          });
+          return;
+        }
+
+        if (launchResult) return;
       }
 
       return originalPlay(data);
@@ -2242,10 +2256,16 @@
     if (originalIptv) {
       Prisma.Player.iptv = function (data) {
         if (shouldInterceptExternal()) {
-          tryLaunch(data, "iptv").then((opened) => {
-            if (!opened) originalIptv(data);
-          });
-          return;
+          const launchResult = tryLaunch(data, "iptv");
+
+          if (launchResult && typeof launchResult.then === "function") {
+            launchResult.then((opened) => {
+              if (!opened) originalIptv(data);
+            });
+            return;
+          }
+
+          if (launchResult) return;
         }
 
         return originalIptv(data);
