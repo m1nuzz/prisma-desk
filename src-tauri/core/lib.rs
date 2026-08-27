@@ -18,6 +18,8 @@ use services::{player, proxy, store, torrserver};
 const BRIDGE_JS: &str = include_str!("../module/bridge.js");
 const PLUGIN_JS: &str = include_str!("../module/client-inject.js");
 const DEFAULT_PRISMA_URL: &str = "http://prisma.ws";
+const MIN_WINDOW_WIDTH: u32 = 800;
+const MIN_WINDOW_HEIGHT: u32 = 600;
 
 fn store_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let base = app
@@ -896,19 +898,26 @@ fn inject_plugin(window: &tauri::Webview) {
     let _ = window.eval(&script);
 }
 
+fn normalize_window_size(width: u64, height: u64) -> (u32, u32) {
+    (
+        width.clamp(MIN_WINDOW_WIDTH as u64, u32::MAX as u64) as u32,
+        height.clamp(MIN_WINDOW_HEIGHT as u64, u32::MAX as u64) as u32,
+    )
+}
+
 fn save_window_state(window: &tauri::WebviewWindow, state: &tauri::State<'_, AppState>) {
     let position = window.outer_position();
     let size = window.outer_size();
-
     if let (Ok(pos), Ok(sz)) = (position, size) {
+        let (width, height) = normalize_window_size(sz.width as u64, sz.height as u64);
         let mut store = state.store.lock().expect("store poisoned");
         let _ = store.set(
             "windowState".into(),
             json!({
                 "x": pos.x,
                 "y": pos.y,
-                "width": sz.width,
-                "height": sz.height
+                "width": width,
+                "height": height
             }),
         );
     }
@@ -931,8 +940,9 @@ fn apply_initial_window_state(window: &tauri::WebviewWindow, state: &tauri::Stat
             let _ = window.set_position(tauri::Position::Physical(tauri::PhysicalPosition::new(
                 x as i32, y as i32,
             )));
+            let (width, height) = normalize_window_size(w, h);
             let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
-                w as u32, h as u32,
+                width, height,
             )));
         }
     }
@@ -1168,4 +1178,31 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod window_state_tests {
+    use super::{normalize_window_size, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH};
+
+    #[test]
+    fn repairs_regression_size_that_made_the_window_invisible() {
+        assert_eq!(
+            normalize_window_size(176, 67),
+            (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+        );
+    }
+
+    #[test]
+    fn preserves_valid_saved_size() {
+        assert_eq!(normalize_window_size(1280, 720), (1280, 720));
+    }
+
+    #[test]
+    fn clamps_dimensions_independently_and_prevents_overflow() {
+        assert_eq!(normalize_window_size(640, 900), (MIN_WINDOW_WIDTH, 900));
+        assert_eq!(
+            normalize_window_size(u64::MAX, 1),
+            (u32::MAX, MIN_WINDOW_HEIGHT)
+        );
+    }
 }
