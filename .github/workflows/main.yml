@@ -40,7 +40,7 @@ jobs:
 
 
       - name: Build macOS ARM64
-        run: npm run tauri -- build --target aarch64-apple-darwin --no-sign
+        run: npm run tauri -- build --target aarch64-apple-darwin --no-sign --config '{"bundle":{"createUpdaterArtifacts":false}}'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -80,7 +80,7 @@ jobs:
 
 
       - name: Build macOS x64 (app only)
-        run: npm run tauri -- build --target x86_64-apple-darwin --bundles app --no-sign
+        run: npm run tauri -- build --target x86_64-apple-darwin --bundles app --no-sign --config '{"bundle":{"createUpdaterArtifacts":false}}'
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -127,7 +127,7 @@ jobs:
         run: npm ci
 
       - name: Build Linux x64
-        run: npm run tauri -- build --target x86_64-unknown-linux-gnu
+        run: npm run tauri -- build --target x86_64-unknown-linux-gnu --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -161,7 +161,7 @@ jobs:
         run: npm ci
 
       - name: Build Windows x64
-        run: npm run tauri -- build --target x86_64-pc-windows-msvc
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: Create Windows portable zip
         shell: pwsh
