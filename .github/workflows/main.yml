@@ -40,7 +40,7 @@ jobs:
 
 
       - name: Build macOS ARM64
-        run: npm run tauri -- build --target aarch64-apple-darwin
+        run: npm run tauri -- build --target aarch64-apple-darwin --no-sign
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -80,7 +80,7 @@ jobs:
 
 
       - name: Build macOS x64 (app only)
-        run: npm run tauri -- build --target x86_64-apple-darwin --bundles app
+        run: npm run tauri -- build --target x86_64-apple-darwin --bundles app --no-sign
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
